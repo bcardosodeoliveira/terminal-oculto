@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const os = require('os');
 const pty = require('@lydell/node-pty');
+const dwm = require('./dwm');
 
 // GPU LIGADA de proposito: o renderer WebGL do xterm precisa dela pra pintar
 // as cores (oh-my-posh) e atualizar a tela (backspace). A exclusao da captura
@@ -48,6 +49,11 @@ function criarJanela() {
   // reforca o material (algumas builds ignoram no construtor)
   try { win.setBackgroundMaterial('acrylic'); } catch { /* Win10: ignora */ }
 
+  // Reaplica a moldura estendida do DWM a cada maximizar/restaurar/resize.
+  // Sem isto a janela fica PRETA ao maximizar (o Electron zera a moldura e o
+  // acrilico some). Tambem arredonda os cantos como o Windows Terminal. Ver dwm.js.
+  dwm.vigiar(win);
+
   // >>> o pulo do gato: esta janela some de qualquer captura de tela <<<
   win.setContentProtection(oculto);
 
@@ -59,6 +65,13 @@ function criarJanela() {
   const env = { ...process.env };
   for (const k of Object.keys(env)) {
     if (k === 'CLAUDECODE' || k === 'CLAUDE_PID' || k.startsWith('CLAUDE_CODE_')) delete env[k];
+    // NO_COLOR=1 vem do ambiente do Claude Code: herdado, deixa o oh-my-posh
+    // sem NENHUMA cor de fundo nos segmentos (prompt cinza). Este terminal
+    // pinta cor, entao a variavel nao se aplica aqui.
+    if (k === 'NO_COLOR') delete env[k];
+    // estado do prompt do shell PAI: se herdado, o oh-my-posh de dentro acha
+    // que continua a mesma sessao e reaproveita posicao de cursor/cache.
+    if (k === 'POSH_SESSION_ID' || k === 'POSH_CURSOR_LINE' || k === 'POSH_CURSOR_COLUMN') delete env[k];
   }
   // avisa suporte a cor 24-bit pro logo do Claude Code sair colorido (laranja), nao cinza
   env.TERM = 'xterm-256color';
@@ -105,6 +118,9 @@ function criarJanela() {
     try { ptyProc && ptyProc.resize(cols, rows); } catch { /* ignora resize invalido */ }
   });
   ipcMain.on('win:min', () => win.minimize());
+  ipcMain.on('win:max', () => {
+    if (win.isMaximized()) win.unmaximize(); else win.maximize();
+  });
   ipcMain.on('win:close', () => win.close());
   ipcMain.handle('win:toggleOculto', () => {
     oculto = !oculto;

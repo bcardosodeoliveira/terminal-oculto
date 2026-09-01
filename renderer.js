@@ -62,9 +62,25 @@ try {
 fit.fit();
 term.focus();
 
+// RESIZE COALESCIDO: o ResizeObserver dispara a cada frame do arraste. Mandar um
+// ResizePseudoConsole por frame faz o conhost repintar em cima de si mesmo, e o
+// prompt direito do oh-my-posh deixa rastro de fundo (o "erase to end of line"
+// pinta com a cor de fundo ativa — BCE). O Windows Terminal junta os resizes;
+// aqui fazemos igual: o fit e imediato (a tela acompanha o arraste) e o aviso ao
+// pty so vai quando o tamanho para de mudar — e so se cols/rows mudaram mesmo.
+let ultimoTamanho = { cols: 0, rows: 0 };
+let timerResize = null;
+
+function avisarPty() {
+  if (term.cols === ultimoTamanho.cols && term.rows === ultimoTamanho.rows) return;
+  ultimoTamanho = { cols: term.cols, rows: term.rows };
+  ipcRenderer.send('pty:resize', { cols: term.cols, rows: term.rows });
+}
+
 function ajustar() {
   fit.fit();
-  ipcRenderer.send('pty:resize', { cols: term.cols, rows: term.rows });
+  clearTimeout(timerResize);
+  timerResize = setTimeout(avisarPty, 120);
 }
 window.addEventListener('resize', ajustar);
 new ResizeObserver(ajustar).observe(document.getElementById('term'));
@@ -112,7 +128,9 @@ ipcRenderer.invoke('win:estadoOculto').then(pintarEstado);
 
 // botoes da barra
 document.getElementById('min').addEventListener('click', () => ipcRenderer.send('win:min'));
+document.getElementById('max').addEventListener('click', () => ipcRenderer.send('win:max'));
 document.getElementById('fechar').addEventListener('click', () => ipcRenderer.send('win:close'));
 
 // clicar em qualquer lugar do terminal devolve o foco
 document.getElementById('term').addEventListener('mousedown', () => term.focus());
+
