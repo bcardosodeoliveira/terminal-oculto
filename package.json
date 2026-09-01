@@ -35,7 +35,8 @@
       "node_modules/@lydell/**"
     ],
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "icon": "icon.ico"
     },
     "portable": {
       "artifactName": "Terminal-oculto-${version}.exe"
