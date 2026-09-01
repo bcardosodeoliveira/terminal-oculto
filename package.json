@@ -1,0 +1,50 @@
+{
+  "name": "terminal-oculto",
+  "version": "1.0.0",
+  "description": "Terminal invisivel a captura de tela (Meet/OBS/PrintScreen) para apresentar sem mostrar o terminal",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable",
+    "dist:setup": "electron-builder --win nsis"
+  },
+  "author": "Bruno",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "1.2.0-beta.15",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0"
+  },
+  "build": {
+    "appId": "com.bruno.terminaloculto",
+    "productName": "Terminal",
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "fonts/**",
+      "node_modules/**"
+    ],
+    "asarUnpack": [
+      "node_modules/@lydell/**"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "Terminal-oculto-${version}.exe"
+    },
+    "nsis": {
+      "artifactName": "Terminal-oculto-setup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

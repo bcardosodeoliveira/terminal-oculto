@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:;" />
+  <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css" />
+  <title>Terminal</title>
+  <style>
+    /* fonte embutida: o app nao depende do dev ter a CaskaydiaCove instalada */
+    @font-face { font-family: 'CaskaydiaCove Nerd Font Mono'; font-weight: normal; font-style: normal;
+      src: url('fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype'); }
+    @font-face { font-family: 'CaskaydiaCove Nerd Font Mono'; font-weight: bold; font-style: normal;
+      src: url('fonts/CaskaydiaCoveNerdFontMono-Bold.ttf') format('truetype'); }
+    @font-face { font-family: 'CaskaydiaCove Nerd Font Mono'; font-weight: normal; font-style: italic;
+      src: url('fonts/CaskaydiaCoveNerdFontMono-Italic.ttf') format('truetype'); }
+    @font-face { font-family: 'CaskaydiaCove Nerd Font Mono'; font-weight: bold; font-style: italic;
+      src: url('fonts/CaskaydiaCoveNerdFontMono-BoldItalic.ttf') format('truetype'); }
+    :root {
+      --bg: rgba(12, 12, 12, 0.6);       /* mais transparente (60%); o resto deixa o acrilico passar */
+      --barra: rgba(20, 20, 20, 0.6);    /* barra de titulo semitranslucida */
+      --linha: rgba(255, 255, 255, 0.08);
+      --texto: #CCCCCC;
+      --apagado: #767676;
+      --verde: #16C60C;
+      --vermelho: #E74856;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%; background: var(--bg);
+      font-family: "CaskaydiaCove Nerd Font Mono", "Cascadia Mono", Consolas, monospace;
+      overflow: hidden; color: var(--texto);
+    }
+    body { display: flex; flex-direction: column; }
+
+    /* barra de titulo arrastavel */
+    #barra {
+      -webkit-app-region: drag;
+      height: 34px; flex: 0 0 34px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 8px 0 12px;
+      background: var(--barra);
+      border-bottom: 1px solid var(--linha);
+      user-select: none; font-size: 12px;
+    }
+    #barra .titulo { color: var(--texto); font-weight: 600; letter-spacing: .3px; }
+    #barra .ponto {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--verde); box-shadow: 0 0 8px 1px rgba(22,198,12,.55);
+      transition: background .15s, box-shadow .15s;
+    }
+    #barra .ponto.visivel { background: var(--vermelho); box-shadow: 0 0 8px 1px rgba(231,72,86,.55); }
+    #estado { color: var(--apagado); font-size: 11px; }
+    #barra .espaco { flex: 1; }
+    .botoes { -webkit-app-region: no-drag; display: flex; gap: 2px; }
+    .botoes button {
+      width: 40px; height: 34px; border: 0; background: transparent;
+      color: var(--apagado); font-size: 14px; cursor: pointer;
+    }
+    .botoes button:hover { background: #222; color: var(--texto); }
+    .botoes button.fechar:hover { background: #C50F1F; color: #fff; }
+    .dica { -webkit-app-region: no-drag; color: var(--apagado); font-size: 11px; }
+    .dica b { color: var(--texto); font-weight: 600; }
+
+    #term { flex: 1; padding: 6px 8px 2px 8px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="barra">
+    <span class="ponto" id="ponto" title="verde = oculto na captura"></span>
+    <span class="titulo">Terminal</span>
+    <span id="estado">oculto na captura</span>
+    <span class="espaco"></span>
+    <span class="dica">esconder/mostrar: <b>Ctrl+Shift+H</b></span>
+    <div class="botoes">
+      <button id="min" title="Minimizar">&#x2212;</button>
+      <button id="fechar" class="fechar" title="Fechar">&#x2715;</button>
+    </div>
+  </div>
+  <div id="term"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

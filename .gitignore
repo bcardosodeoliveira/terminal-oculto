@@ -1,0 +1,6 @@
+# dependencias e artefatos de build (reproduziveis com npm install / npm run dist)
+node_modules/
+dist/
+
+# temporarios
+*.log
