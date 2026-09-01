@@ -1,90 +1,115 @@
-# Terminal (oculto à captura de tela)
+# Terminal oculto à captura de tela
 
-Um terminal que **você vê no monitor, mas some de qualquer captura de tela** —
-Google Meet, Teams, Zoom, OBS, PrintScreen. Serve para mexer no Claude Code (ou
-em qualquer coisa no terminal) enquanto compartilha a **tela inteira** numa
-apresentação, sem a plateia ver o terminal.
+Um terminal que **você vê no seu monitor, mas some de qualquer captura de tela** —
+Google Meet, Teams, Zoom, OBS, PrintScreen. Serve pra mexer no terminal (Claude Code,
+scripts, o que for) enquanto você compartilha a **tela inteira** numa apresentação,
+sem a plateia ver o terminal.
 
-O nome/título é só **"Terminal"** de propósito, pra não dar na cara.
+É 100% legítimo: usa a mesma API do Windows (`SetWindowDisplayAffinity` /
+`WDA_EXCLUDEFROMCAPTURE`) que Netflix e apps de banco usam pra bloquear print. A janela
+continua visível pra você; para a captura, ela simplesmente não existe (nem retângulo
+preto).
+
+O nome/título é só **"Terminal"** de propósito, pra não chamar atenção na barra de tarefas.
 
 ---
 
-## Como usar
+## Baixar e usar (não precisa instalar nada)
 
-1. Abra o atalho **`Terminal`** na Área de Trabalho (ou rode `Terminal.vbs` na pasta).
-2. Abre um **PowerShell 7** dentro da janela. Digite `claude` (ou o que quiser).
-3. **`Ctrl+Shift+H`** liga/desliga a invisibilidade a qualquer momento
-   (atalho global — funciona mesmo sem a janela em foco).
-   - Bolinha **verde** + "oculto na captura" = a plateia NÃO vê.
+1. Vá em **[Releases](../../releases)** e baixe o `Terminal-oculto-x.y.z.exe` (portátil).
+2. Dê 2 cliques. Na 1ª vez o Windows mostra **"Windows protegeu seu PC"** (porque o app
+   não é assinado) → clique em **Mais informações → Executar assim mesmo**.
+3. Abre um **PowerShell 7** (ou o Windows PowerShell 5.1 se você não tiver o 7). Digite
+   `claude`, ou qualquer comando.
+4. **`Ctrl+Shift+H`** liga/desliga a invisibilidade a qualquer momento (atalho global —
+   funciona mesmo sem a janela em foco):
+   - Bolinha **verde** + "oculto na captura" = a plateia **não** vê.
    - Bolinha **vermelha** + "VISIVEL na captura" = aparece na captura de novo.
-4. Compartilhe **a tela inteira** no Meet. A janela não aparece pra quem assiste.
+5. Compartilhe **a tela inteira** no Meet. A janela não aparece pra quem assiste.
 
 > **Teste antes da reunião:** abra um Meet sozinho, compartilhe a tela e confira o
 > preview. Deve estar tudo lá, menos esta janela.
 
----
-
-## Como funciona (resumo técnico)
-
-- Usa a API do Windows `SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE=0x11)`.
-  A janela continua no monitor, mas o compositor (DWM) a remove de qualquer captura.
-  É o mesmo mecanismo que Netflix e apps de banco usam pra bloquear print.
-- **Regra de ouro:** só o **processo dono** da janela pode se esconder. Por isso não
-  dá pra "ocultar o Windows Terminal por fora" com um script PowerShell — retorna
-  `Acesso negado`. Reparentar a janela também não resolve (a afinidade não passa de
-  pai pra filho entre processos — testado). A saída foi um terminal **próprio**
-  (Electron) que chama a API na própria janela via `win.setContentProtection(true)`.
-- Dentro: **Electron** (janela) + **xterm.js** (render do terminal) +
-  **@lydell/node-pty** (o PTY/ConPTY que roda o shell). O `@lydell/node-pty` é N-API
-  (binário pronto, estável entre versões — sem recompilar).
+**Requisitos:** Windows 10 versão 2004+ (build 19041) ou Windows 11. Em versões mais
+antigas a flag não existe e a janela ficaria preta na captura em vez de sumir.
 
 ---
 
-## O que a plateia PODE ver (limites)
+## Recursos
 
-- **A janela** some da captura. ✔
-- O **botão na barra de tarefas** continua lá (nome "Terminal" — discreto). Se quiser
-  sumir totalmente com ele, dá pra ativar `skipTaskbar` no `main.js`.
-- **Notificações/sons** do que roda dentro não são afetados.
-- Só funciona no **Windows 10 2004+ (build 19041)**. Aqui a build é 26200, ok.
-
----
-
-## Personalizar
-
-- **Fonte e cores:** `renderer.js` — objeto `campbell` (esquema de cores) e
-  `fontFamily` (hoje `CaskaydiaCove Nerd Font Mono`, tamanho 14).
-- **Shell padrão:** `main.js`, função `acharShell()` (hoje PowerShell 7). Pra abrir já
-  no Claude Code, troque o spawn para o `claude.exe`
-  (`C:\Users\bruno\.local\bin\claude.exe`).
-- **Atalho de esconder/mostrar:** `main.js`, `globalShortcut.register('CommandOrControl+Shift+H', ...)`.
+- Invisível a Meet/Teams/Zoom/OBS/PrintScreen, com `Ctrl+Shift+H` pra alternar.
+- **PowerShell 7** por padrão, com fallback automático: PS7 → PS7 da Store → **Windows
+  PowerShell 5.1** → `cmd`. Quem não tem o PS7 abre no 5.1 sem erro.
+- Suporta seu **oh-my-posh** (prompt colorido, powerline, emoji), **autocomplete/previsão**
+  do PSReadLine, Tab-complete e histórico — tudo funcionando.
+- Fonte **CaskaydiaCove Nerd Font** embutida (não precisa ter instalada).
+- Ambiente limpo: se você abrir de dentro de outra sessão Claude Code, ele remove os
+  marcadores de "sessão filha" pra se comportar como um terminal normal.
 
 ---
 
-## Estrutura
+## Como funciona (técnico)
 
-    D:\Apps\ClaudeOculto\
-    ├─ main.js        # processo Electron: janela + setContentProtection + PTY
-    ├─ renderer.js    # xterm.js: render, cores Campbell, fonte, resize
-    ├─ index.html     # UI (barra de título própria, indicador de estado)
-    ├─ Terminal.vbs   # lançador sem flash de console
-    ├─ package.json
-    └─ node_modules\  # (fora do OneDrive de propósito — não sincroniza)
+- **Ocultar da captura:** `win.setContentProtection(true)` no Electron, que no Windows
+  chama `SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE=0x11)`. **Só o processo dono
+  da janela pode se esconder** — por isso não dá pra ocultar um terminal externo "por fora";
+  o app precisa ser o próprio terminal.
+- **Stack:** Electron + [xterm.js](https://xtermjs.org) (render) +
+  [`@lydell/node-pty`](https://www.npmjs.com/package/@lydell/node-pty) (PTY/ConPTY, binário
+  N-API pronto, sem compilar) rodando o PowerShell.
+- **Cores (oh-my-posh, logo do Claude Code):** renderer **WebGL** + `COLORTERM=truecolor`.
+  Não usar `disableHardwareAcceleration` (mata as cores).
+- **Edição de linha correta (o pulo do gato):** duas coisas juntas —
+  - `windowsPty: { backend: 'conpty', buildNumber }` no xterm, e
+  - o addon **`@xterm/addon-unicode11`** (larguras Unicode 11).
+  Sem o unicode11, o xterm mede os **emojis do prompt (⚡🚀) com largura errada**, o cursor
+  do PSReadLine dessincroniza e digitar duplica caracteres ("getdate" → "gegetdate") e o
+  backspace parece não apagar. A saída de comando renderiza certo; só a edição da linha
+  quebrava.
+- **Janela nunca em branco:** a saída do shell é bufferizada até o renderer avisar que está
+  pronto, senão o banner/prompt inicial podia se perder numa corrida.
 
-Pasta fora do OneDrive pra não sincronizar o Electron (~190MB).
+---
 
-## Rodar em modo dev / reinstalar
+## Rodar do código / gerar o .exe
 
-    cd D:\Apps\ClaudeOculto
-    npm install
-    node node_modules\electron\install.js   # baixa o binário do Electron, se faltar
-    npm start                               # abre a janela
+```powershell
+git clone https://github.com/bcardosodeoliveira/terminal-oculto.git
+cd terminal-oculto
+npm install
+node node_modules\electron\install.js   # baixa o binário do Electron, se necessário
+npm start                               # roda em modo dev
+npm run dist                            # gera o portátil em dist\Terminal-oculto-*.exe
+npm run dist:setup                      # (opcional) gera um instalador NSIS
+```
+
+### Arquivos
+
+| Arquivo | O quê |
+|---|---|
+| `main.js` | processo Electron: janela, content protection, PTY, atalho global |
+| `renderer.js` | xterm.js: render, cores, fonte, `windowsPty`, `unicode11` |
+| `index.html` | UI (barra de título própria, indicador de estado, `@font-face`) |
+| `fonts/` | CaskaydiaCove Nerd Font embutida |
+| `icon.ico` / `icon.png` | ícone do app |
+
+---
 
 ## Solução de problemas
 
-- **Janela fica preta na captura em vez de sumir:** build do Windows < 19041.
+- **Janela fica preta na captura em vez de sumir:** Windows anterior ao build 19041.
 - **Aparece na captura mesmo assim:** confirme a bolinha verde (`Ctrl+Shift+H`).
-- **Backspace nao apaga / digitar "aaa" vira "adaa":** faltou `conptyInheritCursor: true` no `pty.spawn` (main.js). E o que sincroniza o cursor do PSReadLine. NAO remover.
-- **oh-my-posh sem cor (segmentos brancos) ou logo cinza:** precisa do renderer WebGL (GPU ligada, addon-webgl) + `COLORTERM=truecolor`. Nao usar `disableHardwareAcceleration`.
-- **Erro ao carregar o PTY:** apague `node_modules` e rode `npm install` de novo.
-- **`claude` avisa "Transcript saving is off / CLAUDE_CODE_CHILD_SESSION":** so acontece se o app for aberto de dentro de outra sessao do Claude Code. O `main.js` ja limpa as variaveis `CLAUDE_CODE_*`, `CLAUDECODE` e `CLAUDE_PID` antes de abrir o shell, entao o terminal se comporta como um normal.
+- **Digitar duplica / backspace não apaga:** faltou o `@xterm/addon-unicode11` +
+  `windowsPty` (ver acima). É a correção principal.
+- **oh-my-posh sem cor (segmentos brancos) ou logo cinza:** precisa do renderer WebGL
+  (GPU ligada) + `COLORTERM=truecolor`.
+- **"Windows protegeu seu PC":** normal, o app não é assinado. Mais informações →
+  Executar assim mesmo.
+- **`claude` avisa "Transcript saving is off / CLAUDE_CODE_CHILD_SESSION":** só acontece se
+  o app for aberto de dentro de outra sessão Claude Code; o próprio app já limpa isso.
+
+---
+
+## Licença
+
+MIT — use, modifique e distribua à vontade.

@@ -65,6 +65,8 @@ function criarJanela() {
   env.COLORTERM = 'truecolor';
 
   const shell = acharShell();
+  // autocomplete/previsao do PSReadLine LIGADO normal — a corrupcao era largura
+  // de emoji (corrigida pelo unicode11 no renderer), nao a previsao.
   try {
     ptyProc = pty.spawn(shell, [], {
       name: 'xterm-256color',

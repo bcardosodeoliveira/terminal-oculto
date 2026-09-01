@@ -3,6 +3,7 @@ const { Terminal } = require('@xterm/xterm');
 const { FitAddon } = require('@xterm/addon-fit');
 const { WebLinksAddon } = require('@xterm/addon-web-links');
 const { WebglAddon } = require('@xterm/addon-webgl');
+const { Unicode11Addon } = require('@xterm/addon-unicode11');
 
 // Esquema Campbell (padrao do Windows Terminal)
 const campbell = {
@@ -43,6 +44,10 @@ const term = new Terminal({
 const fit = new FitAddon();
 term.loadAddon(fit);
 term.loadAddon(new WebLinksAddon());
+// larguras Unicode 11 (emoji ⚡🚀 = 2 celulas): sem isso o cursor dessincroniza
+// e digitar duplica caracteres ("getdate" -> "gegetdate")
+term.loadAddon(new Unicode11Addon());
+term.unicode.activeVersion = '11';
 term.open(document.getElementById('term'));
 
 // renderer WebGL: cores truecolor corretas COM fundo transparente (acrilico)
