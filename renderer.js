@@ -73,6 +73,17 @@ setTimeout(ajustar, 50);
 if (document.fonts && document.fonts.ready) { document.fonts.ready.then(ajustar); }
 
 term.onData((d) => ipcRenderer.send('pty:input', d));
+
+// Ctrl+Enter / Shift+Enter = quebra de linha no Claude Code. O xterm manda so "\r"
+// pra qualquer Enter (o app nao distingue e ENVIA a mensagem). Mandamos ESC+CR, o
+// mesmo que o Alt+Enter e que o /terminal-setup configura no Windows Terminal.
+term.attachCustomKeyEventHandler((ev) => {
+  if (ev.key === 'Enter' && (ev.ctrlKey || ev.shiftKey) && !ev.altKey && !ev.metaKey) {
+    if (ev.type === 'keydown') ipcRenderer.send('pty:input', '\x1b\r');
+    return false;
+  }
+  return true;
+});
 ipcRenderer.on('pty:data', (_e, d) => term.write(d));
 // ouvinte pronto: avisa o main pra despejar o que o PS ja tiver cuspido
 ipcRenderer.send('pty:ready');
