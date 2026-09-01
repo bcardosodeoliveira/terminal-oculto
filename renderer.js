@@ -74,12 +74,21 @@ if (document.fonts && document.fonts.ready) { document.fonts.ready.then(ajustar)
 
 term.onData((d) => ipcRenderer.send('pty:input', d));
 
-// Ctrl+Enter / Shift+Enter = quebra de linha no Claude Code. O xterm manda so "\r"
-// pra qualquer Enter (o app nao distingue e ENVIA a mensagem). Mandamos ESC+CR, o
-// mesmo que o Alt+Enter e que o /terminal-setup configura no Windows Terminal.
+// Ctrl+Enter / Shift+Enter = quebra de linha (PSReadLine e Claude Code). O xterm manda
+// so "\r" pra qualquer Enter, entao o shell nao distingue. Mandamos a tecla com os
+// modificadores de verdade no formato win32-input-mode do ConPTY (o mesmo que o
+// Windows Terminal usa): ESC [ Vk ; Sc ; Uc ; KeyDown ; CtrlState ; Repeat _
+//   Vk=13 (VK_RETURN), Sc=28, Uc=10 com Ctrl (como o Windows faz) / 13 com Shift,
+//   CtrlState: 0x08 = LEFT_CTRL_PRESSED, 0x10 = SHIFT_PRESSED
+// Assim o PSReadLine ve Ctrl+Enter/Shift+Enter e o Node (Claude Code) recebe "\n" (Ctrl+J).
+function teclaEnterWin32(ctrl, shift) {
+  const cs = (ctrl ? 0x08 : 0) | (shift ? 0x10 : 0);
+  const ch = ctrl ? 10 : 13;
+  return `\x1b[13;28;${ch};1;${cs};1_` + `\x1b[13;28;${ch};0;${cs};1_`;
+}
 term.attachCustomKeyEventHandler((ev) => {
   if (ev.key === 'Enter' && (ev.ctrlKey || ev.shiftKey) && !ev.altKey && !ev.metaKey) {
-    if (ev.type === 'keydown') ipcRenderer.send('pty:input', '\x1b\r');
+    if (ev.type === 'keydown') ipcRenderer.send('pty:input', teclaEnterWin32(ev.ctrlKey, ev.shiftKey));
     return false;
   }
   return true;
