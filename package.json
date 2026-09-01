@@ -1,6 +1,6 @@
 {
   "name": "terminal-oculto",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Terminal invisivel a captura de tela (Meet/OBS/PrintScreen) para apresentar sem mostrar o terminal",
   "main": "main.js",
   "scripts": {

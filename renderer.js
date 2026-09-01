@@ -21,6 +21,10 @@ const campbell = {
   white: '#CCCCCC',        brightWhite: '#F2F2F2',
 };
 
+// numero do build do Windows (pro xterm lidar certo com o ConPTY)
+let winBuild = 19045;
+try { winBuild = parseInt(require('os').release().split('.')[2], 10) || 19045; } catch {}
+
 const term = new Terminal({
   fontFamily: '"CaskaydiaCove Nerd Font Mono", "Cascadia Mono", Consolas, monospace',
   fontSize: 14,
@@ -30,6 +34,9 @@ const term = new Terminal({
   allowTransparency: true,   // necessario pro fundo translucido / acrilico
   allowProposedApi: true,
   scrollback: 10000,
+  // CORRECAO do backspace/previsao: xterm precisa saber que a saida vem do ConPTY,
+  // senao o PSReadLine dessincroniza (digitar "aaa" vira "adaa" e nao apaga).
+  windowsPty: { backend: 'conpty', buildNumber: winBuild },
   theme: campbell,
 });
 
@@ -62,6 +69,11 @@ if (document.fonts && document.fonts.ready) { document.fonts.ready.then(ajustar)
 
 term.onData((d) => ipcRenderer.send('pty:input', d));
 ipcRenderer.on('pty:data', (_e, d) => term.write(d));
+// ouvinte pronto: avisa o main pra despejar o que o PS ja tiver cuspido
+ipcRenderer.send('pty:ready');
+
+// versao na barra de titulo
+ipcRenderer.invoke('app:versao').then((v) => { document.getElementById('versao').textContent = 'v' + v; }).catch(() => {});
 
 // estado oculto/visivel
 const ponto = document.getElementById('ponto');

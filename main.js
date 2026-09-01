@@ -65,18 +65,39 @@ function criarJanela() {
   env.COLORTERM = 'truecolor';
 
   const shell = acharShell();
-  ptyProc = pty.spawn(shell, [], {
-    name: 'xterm-256color',
-    cols: 120,
-    rows: 30,
-    cwd: process.env.USERPROFILE || os.homedir(),
-    env,
-    conptyInheritCursor: true,   // PSReadLine precisa: sem isso o cursor dessincroniza (backspace/previsao quebram)
-  });
+  try {
+    ptyProc = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 30,
+      cwd: process.env.USERPROFILE || os.homedir(),
+      env,
+      conptyInheritCursor: true,
+    });
+  } catch (e) {
+    // se o pty falhar (ex: antivirus travando o OpenConsole no temp), mostra na janela
+    const msg = '\r\n\x1b[31mFalha ao iniciar o shell:\x1b[0m ' + (e && e.message) +
+                '\r\nShell: ' + shell + '\r\n';
+    win.webContents.once('did-finish-load', () => win.webContents.send('pty:data', msg));
+    return;
+  }
 
-  ptyProc.onData((d) => { if (win && !win.isDestroyed()) win.webContents.send('pty:data', d); });
+  // BUFFER anti-corrida: segura a saida do PS ate a janela avisar que esta pronta,
+  // senao o banner/prompt inicial pode chegar antes do ouvinte e a janela fica em branco.
+  let rendererPronto = false;
+  let buffer = [];
+  ptyProc.onData((d) => {
+    if (!win || win.isDestroyed()) return;
+    if (rendererPronto) win.webContents.send('pty:data', d);
+    else buffer.push(d);
+  });
   ptyProc.onExit(() => { app.quit(); });
 
+  ipcMain.on('pty:ready', () => {
+    rendererPronto = true;
+    for (const d of buffer) win.webContents.send('pty:data', d);
+    buffer = [];
+  });
   ipcMain.on('pty:input', (_e, data) => { ptyProc && ptyProc.write(data); });
   ipcMain.on('pty:resize', (_e, { cols, rows }) => {
     try { ptyProc && ptyProc.resize(cols, rows); } catch { /* ignora resize invalido */ }
@@ -89,6 +110,7 @@ function criarJanela() {
     return oculto;
   });
   ipcMain.handle('win:estadoOculto', () => oculto);
+  ipcMain.handle('app:versao', () => app.getVersion());
 
   win.on('closed', () => { win = null; });
 }

@@ -50,6 +50,7 @@
       transition: background .15s, box-shadow .15s;
     }
     #barra .ponto.visivel { background: var(--vermelho); box-shadow: 0 0 8px 1px rgba(231,72,86,.55); }
+    #barra .versao { color: var(--apagado); font-size: 10px; opacity: .7; }
     #estado { color: var(--apagado); font-size: 11px; }
     #barra .espaco { flex: 1; }
     .botoes { -webkit-app-region: no-drag; display: flex; gap: 2px; }
@@ -69,6 +70,7 @@
   <div id="barra">
     <span class="ponto" id="ponto" title="verde = oculto na captura"></span>
     <span class="titulo">Terminal</span>
+    <span class="versao" id="versao"></span>
     <span id="estado">oculto na captura</span>
     <span class="espaco"></span>
     <span class="dica">esconder/mostrar: <b>Ctrl+Shift+H</b></span>
